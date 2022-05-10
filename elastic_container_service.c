@@ -40,18 +40,11 @@ corren en el host interactuan con el proceso subscribe_host.
 
 #define HOST_NUMBER 200
 
-void* create_shared_memory(size_t size) {
-  // Our memory buffer will be readable and writable:
-  int protection = PROT_READ | PROT_WRITE;
+int randInRange(){
 
-  // The buffer will be shared (meaning other processes can access it), but
-  // anonymous (meaning third-party processes cannot obtain an address for it),
-  // so only this process and its children will be able to use it:
-  int visibility = MAP_SHARED | MAP_ANONYMOUS;
+	srand(time(NULL));
 
-  // The remaining parameters to `mmap()` are not important for this use case,
-  // but the manpage for `mmap` explains their purpose.
-  return mmap(NULL, size, protection, visibility, -1, 0);
+	return(rand() % 2);
 }
 
 int readHosts(){
@@ -67,8 +60,36 @@ int readHosts(){
 	char fname[20] = "hosts.txt";
 
     fptr = fopen(fname, "r");
+
+	//SHARE MEMORY
+
+	const int SIZE = 4096;
+
+	const char *name = "OS";
+
+	char text[SIZE];
+
 	
-    while(fgets(hostsArray[i], 200, fptr)){
+
+	int fd;
+
+    /* pointer to shared memory obect */
+    char *ptr;
+
+	fd = shm_open(name, O_CREAT | O_RDWR, 0666);
+    if (fd == -1) {
+		perror("open");
+		return 10;
+	}
+
+	/* configure the size of the shared memory object */
+    ftruncate (fd, SIZE);
+
+	ptr = (char *) mmap (0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+	//SHARE MEMORY
+	
+    while(fgets(hostsArray[i], 2000, fptr)){
 
         hostsArray[i][strlen(hostsArray[i]) - 1] = '\0';
 
@@ -78,13 +99,22 @@ int readHosts(){
 
     tot = i;
 
-	printf("\n\nElastic Container Service - Subscribe Host: Los Hosts Disponibles son: \n\n");   
+	printf("\n\nElastic Container Service - Subscribe Host: Los Hosts Disponibles son: \n\n");
 
-    for(int i = 0; i < tot; ++i){
+	int randomHost = randInRange();
 
-        printf(" %s\n", hostsArray[i]);
+	printf("HOLA SOY RANDOM HOST %d", randomHost);
 
-    }
+	strcpy(text, hostsArray[randomHost]);
+
+	/* write to the shared memory object */
+	sprintf(ptr, "%s", text);
+
+	ptr += strlen(text);
+
+	printf("sent message: %s\n", text);
+
+	printf(" %s\n", hostsArray[randomHost]);
 
     printf("\n");
 
@@ -180,39 +210,6 @@ int checkExistence(char * containerName){
 }
 
 int subscribe_host(){
-
-	//SHARE MEMORY
-
-
-	const int SIZE = 4096;
-
-	const char *name = "OS";
-
-	const char *message = "Hello World!";
-
-	int fd;
-
-    /* pointer to shared memory obect */
-    char *ptr;
-
-	fd = shm_open(name, O_CREAT | O_RDWR, 0666);
-    if (fd == -1) {
-		perror("open");
-		return 10;
-	}
-
-	/* configure the size of the shared memory object */
-    ftruncate (fd, SIZE);
-
-	ptr = (char *) mmap (0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-    /* write to the shared memory object */
-    sprintf(ptr, "%s", message);
-    ptr += strlen(message);
-
-    printf("sent message: %s\n", message);
-
-	//SHARE MEMORY
 
 	readHosts();
 
