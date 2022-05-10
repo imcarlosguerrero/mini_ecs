@@ -163,8 +163,6 @@ int subscribe_host(){
 
 	int hostNumber = 0;
 
-	
-
 	int subscribe_host, client_sock, c, read_size;
 
 	struct sockaddr_in server, client;
@@ -369,11 +367,11 @@ int main() {
 
 	char parent_message[] = "hello";  // parent process will write this message
 
-  	char child_message[] = "goodbye"; // child process will then write this one
+	char child_message[] = "goodbye"; // child process will then write this one
 
-  	void* shmem = create_shared_memory(128);
+	void* shmem = create_shared_memory(128);
 
-  	memcpy(shmem, parent_message, sizeof(parent_message));
+	memcpy(shmem, parent_message, sizeof(parent_message));
 
 	pid = fork();
 
@@ -383,22 +381,17 @@ int main() {
 		memcpy(shmem, child_message, sizeof(child_message));
 		printf("Child wrote: %s\n", shmem);
 
-
-		//Subscribe_Host
-
 		subscribe_host();
 
 	}
 
 	else{
 
+		admin_container();
+
 		printf("Parent read: %s\n", shmem);
 		sleep(1);
 		printf("After 1s, parent read: %s\n", shmem);
-
-		//Admin_Container
-
-		admin_container();
 
 	}
 
