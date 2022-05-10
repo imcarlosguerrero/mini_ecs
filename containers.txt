@@ -1,2 +1,3 @@
-host1 Steven
-host1 Danna
+host2 Joan
+host2 Steven
+host2 Danna

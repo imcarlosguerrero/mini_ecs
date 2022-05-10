@@ -22,7 +22,6 @@ corren en el host interactuan con el proceso subscribe_host.
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
-#include <sys/shm.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -33,7 +32,6 @@ corren en el host interactuan con el proceso subscribe_host.
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -69,8 +67,6 @@ int readHosts(){
 
 	char text[SIZE];
 
-	
-
 	int fd;
 
     /* pointer to shared memory obect */
@@ -78,6 +74,7 @@ int readHosts(){
 
 	fd = shm_open(name, O_CREAT | O_RDWR, 0666);
     if (fd == -1) {
+		printf("SOY EL DE HOSTS");
 		perror("open");
 		return 10;
 	}
@@ -102,9 +99,7 @@ int readHosts(){
 	printf("\n\nElastic Container Service - Subscribe Host: Los Hosts Disponibles son: \n\n");
 
 	int randomHost = randInRange();
-
-	printf("HOLA SOY RANDOM HOST %d", randomHost);
-
+	
 	strcpy(text, hostsArray[randomHost]);
 
 	/* write to the shared memory object */
@@ -113,6 +108,8 @@ int readHosts(){
 	ptr += strlen(text);
 
 	printf("sent message: %s\n", text);
+
+	return randomHost;
 
 	printf(" %s\n", hostsArray[randomHost]);
 
@@ -210,8 +207,6 @@ int checkExistence(char * containerName){
 }
 
 int subscribe_host(){
-
-	readHosts();
 
 	int hostNumber = 0;
 
@@ -317,49 +312,13 @@ int subscribe_host(){
 	
 	}
 
+	
+
 }
 
 int admin_container(){
 
-	//SHARE MEMORY
-
-
-	/* the size (in bytes) of shared memory object */
-    const int SIZE = 4096;
-    /* name of the shared memory object */
-    const char *name = "OS";
-    /* shared memory file descriptor */
-    int fd;
-    /* pointer to shared memory obect */
-    char *ptr;
-    /* array to receive the data */
-    char data[SIZE];
-
-	fd = shm_open(name, O_RDONLY, 0666);
-    if (fd == -1) {
-		perror("open");
-		return 10;
-	}
-
-    /* configure the size of the shared memory object */
-    ftruncate (fd, SIZE);
-
-	ptr = (char *) mmap (NULL, SIZE, PROT_READ, MAP_SHARED, fd, 0);
-    if (ptr == MAP_FAILED) {
-		perror("mmap");
-		return 30;
-	}
-
-    // place data into memory
-	memcpy(data, ptr, SIZE);
-    printf("data received: %s\n", data);
-    
-    /* remove the shared memory object */
-    shm_unlink(name);
-
-	//SHARE MEMORY
-
-	int admin_container, client_sock, c, read_size, host_port = 9090;
+	int admin_container, client_sock, c, read_size, host_port;
 
 	struct sockaddr_in server , client;
 
@@ -428,12 +387,64 @@ int admin_container(){
 				send(client_sock, client_message, strlen(client_message), 0);
 
 				received = 1;
+				
+				/* the size (in bytes) of shared memory object */
+				const int SIZE = 4096;
+				/* name of the shared memory object */
+				const char *name = "OS";
+				/* shared memory file descriptor */
+				int fd;
+				/* pointer to shared memory obect */
+				char *ptr;
+				/* array to receive the data */
+				char data[SIZE];
 
-				//AQUI NECESITO SHARE_MEMORY DESDE SUBSCRIBE_HOST PARA PODER RECIBIR EL PUERTO QUE DEBERIA UTILIZAR A PARTIR DE LA LISTA QUE YA TENGO
-
-				//LEIDA, DEBERIA SELECCIONAR UNA DE LAS LINEAS AL AZAR Y ENVIAR LA ULTIMA PARTE DE ELLA (EL HOST) AQUI
-
+				fd = shm_open(name, O_RDONLY, 0666);
+				
+				if (fd == -1) {
+					printf("SOY EL DE ADMIN");
 					
+					perror("open");
+					return 10;
+				}
+
+				/* configure the size of the shared memory object */
+				ftruncate (fd, SIZE);
+
+				ptr = (char *) mmap (NULL, SIZE, PROT_READ, MAP_SHARED, fd, 0);
+				if (ptr == MAP_FAILED) {
+					perror("mmap");
+					return 30;
+				}
+
+				// place data into memory
+				memcpy(data, ptr, SIZE);
+				printf("data received: %s\n", data);
+
+				char * token = strtok(data, " ");
+
+				int i = 0;
+
+				while( token != NULL ){
+
+					if(i == 2){
+
+						printf("HOLA SOY EL PUERTO DEL HOST %s\n", token);
+
+						host_port = atoi(token);			
+
+					}
+
+					token = strtok(NULL, " ");
+
+					i++;
+
+				}
+
+				//SHARE MEMORY
+
+				printf("HOLA SOY EL PUERTO DEL HOST %d\n", host_port);
+
 
 				sendHostMessage(client_message, host_port);
 
