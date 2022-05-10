@@ -13,6 +13,7 @@ corren en el host interactuan con el proceso subscribe_host.
 #include<sys/socket.h>
 #include<arpa/inet.h>	//inet_addr
 #include<unistd.h>	//write
+#include <time.h>
 
 #define HOST_NUMBER 200
 
@@ -94,6 +95,50 @@ int sendHostMessage(char * client_message, int port){
     send(sock, message, strlen(message), 0);
 
 	close(sock);
+
+}
+
+int checkExistence(char * containerName){
+
+	FILE* filePointer;
+
+	int wordExist = 0;
+
+	int bufferLength = 255;
+
+	char line[bufferLength];
+
+	int lineCounter = 0;
+
+	filePointer = fopen("containers.txt", "r");
+
+	while(fgets(line, bufferLength, filePointer)){
+
+		lineCounter++;
+
+		char *ptr = strstr(line, containerName);
+
+		if(ptr != NULL){
+
+			wordExist = 1;
+
+			break;
+		}
+	}
+
+	fclose(filePointer);
+
+	if(wordExist == 1){
+
+		return 1;
+
+	}
+
+	else {
+
+		return 0;
+
+	}
 
 }
 
@@ -209,7 +254,7 @@ int subscribe_host(){
 
 int admin_container(){
 
-	int admin_container, client_sock, c, read_size, host_port = 8080;
+	int admin_container, client_sock, c, read_size, host_port = 9090;
 
 	struct sockaddr_in server , client;
 
@@ -282,6 +327,8 @@ int admin_container(){
 				//AQUI NECESITO SHARE_MEMORY DESDE SUBSCRIBE_HOST PARA PODER RECIBIR EL PUERTO QUE DEBERIA UTILIZAR A PARTIR DE LA LISTA QUE YA TENGO
 
 				//LEIDA, DEBERIA SELECCIONAR UNA DE LAS LINEAS AL AZAR Y ENVIAR LA ULTIMA PARTE DE ELLA (EL HOST) AQUI
+
+					
 
 				sendHostMessage(client_message, host_port);
 
