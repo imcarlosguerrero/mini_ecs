@@ -1,8 +1,2 @@
-host1 Joan
-host1 Angel
-host1 Manuel
-host1 Fabian
 host1 Steven
 host1 Danna
-host1 Maicol
-host1 Laura

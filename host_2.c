@@ -228,7 +228,7 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 				FILE *fp = fopen(filename, "a");
 
-				fprintf(fp, "host1 %s\n", containerName);
+				fprintf(fp, "host2 %s\n", containerName);
 
 				fclose(fp);
 
@@ -352,11 +352,11 @@ int ecs_agent(){
 
 	if(socket_desc == -1){
 
-		printf("Elastic Container Service - Host #%d: Could not create Socket Server.", HOST_NUMBER);
+		printf("\n\nElastic Container Service - Host #%d: Could not create Socket Server.", HOST_NUMBER);
 
 	}
 
-	printf("Elastic Container Service - Host #%d: Socket Server created successfully.", HOST_NUMBER);
+	printf("\n\nElastic Container Service - Host #%d: Socket Server created successfully.", HOST_NUMBER);
 
 	sendSubscribeHostMessage(HOST_INADDR);
 
@@ -368,19 +368,19 @@ int ecs_agent(){
 
 	if(bind(socket_desc, (struct sockaddr *) &server, sizeof(server)) < 0){
 
-		perror("Bind failed. Error");
+		printf("\n\nElastic Container Service - Host #%d: Bind failed. Error", HOST_NUMBER);
 
 		return 1;
 
 	}
 
-	puts("Bind done");
+	printf("\n\nElastic Container Service - Host #%d: Bind done", HOST_NUMBER);
 
 	while(1){
 
 		listen(socket_desc, 3);
 
-		puts("Waiting for incoming connections...");
+		printf("\n\nElastic Container Service - Host #%d: Waiting for incoming connections...", HOST_NUMBER);
 
 		c = sizeof(struct sockaddr_in);
 
@@ -390,13 +390,13 @@ int ecs_agent(){
 
 		if(client_sock < 0){
 
-			perror("Accept failed");
+			printf("\n\nElastic Container Service - Host #%d: Accept failed", HOST_NUMBER);
 
 			return 1;
 
 		}
 
-		puts("Connection accepted");
+		printf("\n\nElastic Container Service - Host #%d: Connection accepted", HOST_NUMBER);
 
 		received = 0;
 		
@@ -406,7 +406,7 @@ int ecs_agent(){
 
 			if(recv(client_sock, client_message, 2000, 0) > 0){
 
-				printf("received message host: %s\n", client_message);
+				printf("\n\nElastic Container Service - Host #%d: received message host: %s\n", HOST_NUMBER, client_message);
 
 				char * client_message_split = strtok(client_message, " ");
 
@@ -418,7 +418,7 @@ int ecs_agent(){
 
 					strcpy(containerName, client_message_split);
 
-					printf("Request: %s, Container Name: %s\n\n", clientRequest, containerName);
+					printf("\n\nElastic Container Service - Host #%d: Request: %s, Container Name: %s\n\n", HOST_NUMBER, clientRequest, containerName);
 
 				}
 
@@ -430,7 +430,7 @@ int ecs_agent(){
 			
 			else{
 
-				perror("Receive Failed");
+				printf("\n\nElastic Container Service - Host #%d: Receive Failed", HOST_NUMBER);
 
 				break;
 

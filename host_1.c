@@ -21,54 +21,53 @@ Cuando un agente se inicia en un host, este debe reportarse enviando una petici√
 #include<string.h>
 #include<sys/wait.h>
 
-#define HOST1_INADDR "127.0.0.0 8080"
-
 #define HOST_NUMBER 1
 
 #define PORT 8080
 
-int sendSubscribeHostMessage(char * message){
+#define HOST_INADDR "127.0.0.0 8080"
+
+#define SUBSCRIBE_HOST_PORT 6060
+
+#define ADMIN_CONTAINER_PORT 7070
+
+void sendSubscribeHostMessage(char * message){
 
 	int sock;
 
 	struct sockaddr_in server;
 
-	char reply[50];
+	char reply[200];
 
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 
 	if(sock == -1){
 
-		printf("\n\nElastic Container Service - host #%d: Could not create Socket Client.", HOST_NUMBER);
+		printf("\n\nElastic Container Service - Host #%d: Could not create Socket Client.", HOST_NUMBER);
 
 	}
 
-	printf("\n\nElastic Container Service - host #%d: Socket Client created successfully.", HOST_NUMBER);
+	printf("\n\nElastic Container Service - Host #%d: Socket Client created successfully.", HOST_NUMBER);
 
 	server.sin_family = AF_INET;
 
 	server.sin_addr.s_addr = INADDR_ANY;
 
-	server.sin_port = htons(6060);
+	server.sin_port = htons(SUBSCRIBE_HOST_PORT);
 
 	if(connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0){
 
-		//printf("\n\nElastic Container Service - host #%d: Connect failed. ", HOST_NUMBER);
+		printf("\n\nElastic Container Service - Host #%d: Connect failed.", HOST_NUMBER);
 
-		perror("Error");
-
-		return 1;
 	}
 
-	//printf("\n\nElastic Container Service - host #%d: Socket Client connected successfully.", HOST_NUMBER);
+	printf("\n\nElastic Container Service - Host #%d: Socket Client connected successfully.", HOST_NUMBER);
 
 	memset(reply, 0, 20);
 
     strcpy(reply, message);
 
     send(sock, reply, strlen(reply), 0);
-
-	printf("\n\nElastic Container Service - Host #%d: Message sent to Subscribe Host.", HOST_NUMBER);
 
 	close(sock);
 
@@ -233,13 +232,13 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 				fclose(fp);
 
-				sendSubscribeHostMessage("\n\nElastic Container Service - Host #1: El contenedor ha sido creado.");
+				sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ha sido creado.");
 
 			}
 
 			else{
 
-				sendSubscribeHostMessage("\n\nElastic Container Service - Host #1: El contenedor ya existe.");
+				sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ya existe.");
 
 			}
 
@@ -253,13 +252,13 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 			if(containerExistence == 1){
 
-				sendSubscribeHostMessage("\n\nElastic Container Service - Host #1: El contenedor ha sido detenido");
+				sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ha sido detenido");
 
 			}
 
 			else{
 
-				sendSubscribeHostMessage("\n\nElastic Container Service - Host #1: El contenedor no existe.");
+				sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor no existe.");
 
 			}
 
@@ -315,13 +314,13 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 				rename(temporalFile, containerList);
 
-				sendSubscribeHostMessage("\n\nElastic Container Service - Host #1: Contenedor Borrado con Exito.");
+				sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: Contenedor Borrado con Exito.");
 
 			}
 
 			else{
 
-				sendSubscribeHostMessage("\n\nElastic Container Service - Host #1: El contenedor no existe.");
+				sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor no existe.");
 
 			}
 
@@ -333,9 +332,9 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 		}
 
-		wait(NULL);
-
 	}
+
+	wait(NULL);
 
 }
 
@@ -359,23 +358,23 @@ int ecs_agent(){
 
 	printf("\n\nElastic Container Service - Host #%d: Socket Server created successfully.", HOST_NUMBER);
 
-	sendSubscribeHostMessage(HOST1_INADDR);
+	sendSubscribeHostMessage(HOST_INADDR);
 
 	server.sin_family = AF_INET;
 
 	server.sin_addr.s_addr = INADDR_ANY;
 
-	server.sin_port = htons(8080);
+	server.sin_port = htons(PORT);
 
 	if(bind(socket_desc, (struct sockaddr *) &server, sizeof(server)) < 0){
 
-		perror("Bind failed. Error");
+		printf("\n\nElastic Container Service - Host #%d: Bind failed. Error", HOST_NUMBER);
 
 		return 1;
 
 	}
 
-	printf("\n\nElastic Container Service - Host #%d: Socket Server bind done.", HOST_NUMBER);
+	printf("\n\nElastic Container Service - Host #%d: Bind done", HOST_NUMBER);
 
 	while(1){
 
@@ -385,11 +384,13 @@ int ecs_agent(){
 
 		c = sizeof(struct sockaddr_in);
 
+		//ACCEPT CONNECTION AND SEND TO THREAD
+
 		client_sock = accept(socket_desc, (struct sockaddr *) &client, (socklen_t*) &c);
 
 		if(client_sock < 0){
 
-			puts("\n\nElastic Container Service - Host #%d: Accept failed");
+			printf("\n\nElastic Container Service - Host #%d: Accept failed", HOST_NUMBER);
 
 			return 1;
 
@@ -405,7 +406,7 @@ int ecs_agent(){
 
 			if(recv(client_sock, client_message, 2000, 0) > 0){
 
-				printf("received message host: %s\n", client_message);
+				printf("\n\nElastic Container Service - Host #%d: received message host: %s\n", HOST_NUMBER, client_message);
 
 				char * client_message_split = strtok(client_message, " ");
 
@@ -417,7 +418,7 @@ int ecs_agent(){
 
 					strcpy(containerName, client_message_split);
 
-					printf("Request: %s, Container Name: %s\n\n", clientRequest, containerName);
+					printf("\n\nElastic Container Service - Host #%d: Request: %s, Container Name: %s\n\n", HOST_NUMBER, clientRequest, containerName);
 
 				}
 
@@ -429,7 +430,7 @@ int ecs_agent(){
 			
 			else{
 
-				perror("Receive Failed");
+				printf("\n\nElastic Container Service - Host #%d: Receive Failed", HOST_NUMBER);
 
 				break;
 

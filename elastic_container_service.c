@@ -15,6 +15,7 @@ corren en el host interactuan con el proceso subscribe_host.
 #include<unistd.h>	//write
 #include <time.h>
 
+
 #define HOST_NUMBER 200
 
 int readHosts(){
@@ -41,7 +42,7 @@ int readHosts(){
 
     tot = i;
 
-	printf("\nElastic Container Service - Subscribe Host: Los Hosts Disponibles son: \n\n");   
+	printf("\n\nElastic Container Service - Subscribe Host: Los Hosts Disponibles son: \n\n");   
 
     for(int i = 0; i < tot; ++i){
 
@@ -110,7 +111,7 @@ int checkExistence(char * containerName){
 
 	int lineCounter = 0;
 
-	filePointer = fopen("containers.txt", "r");
+	filePointer = fopen("hosts.txt", "r");
 
 	while(fgets(line, bufferLength, filePointer)){
 
@@ -164,7 +165,7 @@ int subscribe_host(){
 
 	}
 
-	printf("Elastic Container Service - Subscribe Host: Socket Server created successfully.");
+	printf("\n\nElastic Container Service - Subscribe Host: Socket Server created successfully.");
 
 	char *filename = "hosts.txt";
 
@@ -180,13 +181,13 @@ int subscribe_host(){
 
 	}
 
-	printf("\nElastic Container Service - Subscribe Host: Socket Server bind done.");
+	printf("\n\nElastic Container Service - Subscribe Host: Socket Server bind done.");
 
 	while(1){
 
 		listen(subscribe_host, 10);
 
-		puts("\n\nElastic Container Service - Subscribe Host: Waiting for incoming connections...");
+		printf("\n\nElastic Container Service - Subscribe Host: Waiting for incoming connections...");
 
 		c = sizeof(struct sockaddr_in);
 
@@ -270,7 +271,7 @@ int admin_container(){
 
 	}
 
-	puts("\nElastic Container Service - Admin Container: Socket Server created successfully.\n");
+	printf("\n\nElastic Container Service - Admin Container: Socket Server created successfully.");
 
 	server.sin_family = AF_INET;
 
@@ -292,7 +293,7 @@ int admin_container(){
 
 		listen(admin_container, 10);
 
-		puts("\n\nElastic Container Service - Admin Container: Waiting for incoming connections...\n\n");
+		printf("\n\nElastic Container Service - Admin Container: Waiting for incoming connections...");
 
 		c = sizeof(struct sockaddr_in);
 
@@ -306,7 +307,7 @@ int admin_container(){
 
 		}
 
-		puts("Elastic Container Service - Admin Container: Connection accepted.");
+		printf("\n\nElastic Container Service - Admin Container: Connection accepted.");
 
 		received = 0;
 
