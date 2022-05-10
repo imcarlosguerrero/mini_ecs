@@ -15,6 +15,28 @@ corren en el host interactuan con el proceso subscribe_host.
 #include<unistd.h>	//write
 #include <time.h>
 #include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/shm.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 #define HOST_NUMBER 200
 
@@ -159,6 +181,39 @@ int checkExistence(char * containerName){
 
 int subscribe_host(){
 
+	//SHARE MEMORY
+
+
+	const int SIZE = 4096;
+
+	const char *name = "OS";
+
+	const char *message = "Hello World!";
+
+	int fd;
+
+    /* pointer to shared memory obect */
+    char *ptr;
+
+	fd = shm_open(name, O_CREAT | O_RDWR, 0666);
+    if (fd == -1) {
+		perror("open");
+		return 10;
+	}
+
+	/* configure the size of the shared memory object */
+    ftruncate (fd, SIZE);
+
+	ptr = (char *) mmap (0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+    /* write to the shared memory object */
+    sprintf(ptr, "%s", message);
+    ptr += strlen(message);
+
+    printf("sent message: %s\n", message);
+
+	//SHARE MEMORY
+
 	readHosts();
 
 	int hostNumber = 0;
@@ -269,6 +324,44 @@ int subscribe_host(){
 
 int admin_container(){
 
+	//SHARE MEMORY
+
+
+	/* the size (in bytes) of shared memory object */
+    const int SIZE = 4096;
+    /* name of the shared memory object */
+    const char *name = "OS";
+    /* shared memory file descriptor */
+    int fd;
+    /* pointer to shared memory obect */
+    char *ptr;
+    /* array to receive the data */
+    char data[SIZE];
+
+	fd = shm_open(name, O_RDONLY, 0666);
+    if (fd == -1) {
+		perror("open");
+		return 10;
+	}
+
+    /* configure the size of the shared memory object */
+    ftruncate (fd, SIZE);
+
+	ptr = (char *) mmap (NULL, SIZE, PROT_READ, MAP_SHARED, fd, 0);
+    if (ptr == MAP_FAILED) {
+		perror("mmap");
+		return 30;
+	}
+
+    // place data into memory
+	memcpy(data, ptr, SIZE);
+    printf("data received: %s\n", data);
+    
+    /* remove the shared memory object */
+    shm_unlink(name);
+
+	//SHARE MEMORY
+
 	int admin_container, client_sock, c, read_size, host_port = 9090;
 
 	struct sockaddr_in server , client;
@@ -365,21 +458,9 @@ int main() {
 
 	pid_t pid;
 
-	char parent_message[] = "hello";  // parent process will write this message
-
-	char child_message[] = "goodbye"; // child process will then write this one
-
-	void* shmem = create_shared_memory(128);
-
-	memcpy(shmem, parent_message, sizeof(parent_message));
-
 	pid = fork();
 
 	if(pid == 0){
-
-		printf("Child read: %s\n", shmem);
-		memcpy(shmem, child_message, sizeof(child_message));
-		printf("Child wrote: %s\n", shmem);
 
 		subscribe_host();
 
@@ -388,10 +469,6 @@ int main() {
 	else{
 
 		admin_container();
-
-		printf("Parent read: %s\n", shmem);
-		sleep(1);
-		printf("After 1s, parent read: %s\n", shmem);
 
 	}
 
