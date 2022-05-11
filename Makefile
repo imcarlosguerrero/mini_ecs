@@ -15,4 +15,4 @@ host_2: host_2.o
 	gcc -o host_2 host_2.o && ./host_2
 	
 clean:
-	rm -f -r *.o *.pyc __pycache__ .vscode
+	rm -f -r *.o *.pyc __pycache__ .vscode && clear && clear
