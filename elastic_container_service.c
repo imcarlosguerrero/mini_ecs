@@ -72,43 +72,13 @@ int readHosts(){
 
 }
 
-char getRandomHost(){
 
-	char hostsArray[HOST_NUMBER][HOST_NUMBER];
-
-    FILE *fptr = NULL; 
-
-    int i = 0;
-
-    int tot = 0;
-
-	char fname[20] = "hosts.txt";
-
-    fptr = fopen(fname, "r");
-
-    while(fgets(hostsArray[i], 2000, fptr)){
-
-        hostsArray[i][strlen(hostsArray[i]) - 1] = '\0';
-
-        i++;
-
-    }
-
-    tot = i;
-
-	int randomHostNumber = getRandomNumber();
-
-	char randomHost[200];
-
-	strcpy(randomHost, hostsArray[i]);
-	
-    return randomHost;
-
-}
 
 int sendHostMessage(char * client_message, int port){
 
 	int sock;
+
+	printf("HOLA SOY EL PUERTO DE SEND %d\n", port);
 
 	struct sockaddr_in server;
 
@@ -124,11 +94,15 @@ int sendHostMessage(char * client_message, int port){
 
 	printf("\n\nElastic Container Service - Subscribe Host: Socket Client created successfully.");
 
+	
+
 	server.sin_family = AF_INET;
 
 	server.sin_addr.s_addr = INADDR_ANY;
 
 	server.sin_port = htons(port);
+
+	sleep(1);
 
 	if(connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0){
 
@@ -207,28 +181,6 @@ int subscribe_host(){
 
 	subscribe_host = socket(AF_INET, SOCK_STREAM, 0);
 
-	//SHARE MEMORY
-
-	int fd;
-
-	fd = shm_open(SHMOBJ_NAME, O_CREAT | O_RDWR, 00600);
-
-	if(fd == -1){
-
-		perror("Open");
-		exit(1);
-
-	}
-
-	if(ftruncate(fd, SHMOBJ_SIZE) == -1){
-
-		perror("Share Memory Resize");
-		exit(1);
-
-	}
-
-	//SHARE MEMORY
-
 	if(subscribe_host == -1){
 
 		printf("\n\nElastic Container Service - Subscribe Host: Could not create Socket Server.");
@@ -287,8 +239,6 @@ int subscribe_host(){
 
 			else{
 
-				printf("\n\n%s", client_message);
-
 				FILE *fp = fopen(filename, "a");
 
 				if(fp == NULL){
@@ -300,21 +250,16 @@ int subscribe_host(){
 
 				hostNumber++;
 
-				//SHARE MEMORY
-
-
-				//SHARE MEMORY
-
 				fprintf(fp, "host%d %s\n", hostNumber, client_message);
 
 				fclose(fp);
 
 				received = 1;
 
-				send(client_sock, client_message, strlen(client_message), 0);
 
-				
-				/*
+				//RANDOM HOST AND SEND TO SHARE MEMORY
+
+				int fd;
 
 				char buff[1024];
 
@@ -323,13 +268,43 @@ int subscribe_host(){
 				fd = shm_open(SHMOBJ_NAME, O_RDWR, 0);
 
 				if(fd == -1){
+ 
+					perror("Open in Subscribe_Host");
 
-					perror("Open in Admin_Container ");
+					exit(1);
 
 
 				}
 
-				strcpy(buff, getRandomHost());
+				char hostsArray[HOST_NUMBER][HOST_NUMBER];
+
+				FILE *fptr = NULL; 
+
+				int i = 0;
+
+				int tot = 0;
+
+				char fname[20] = "hosts.txt";
+
+				fptr = fopen(fname, "r");
+
+				while(fgets(hostsArray[i], 2000, fptr)){
+
+					hostsArray[i][strlen(hostsArray[i]) - 1] = '\0';
+
+					i++;
+
+				}
+
+				tot = i;
+
+				char randomHost[200];
+
+				i = getRandomNumber();
+
+				strcpy(randomHost, hostsArray[i]);
+
+				strcpy(buff, randomHost);
 
 				ptr = mmap(0, sizeof(buff), PROT_WRITE, MAP_SHARED, fd, 0);
 
@@ -337,6 +312,7 @@ int subscribe_host(){
 
 					perror("Map Failed ");
 
+					exit(1);
 
 				}
 
@@ -344,8 +320,9 @@ int subscribe_host(){
 
 				close(fd);
 
-				*/
+				//RANDOM HOST AND SEND TO SHARE MEMORY
 
+				send(client_sock, client_message, strlen(client_message), 0);
 
 			}
 
@@ -365,7 +342,7 @@ int subscribe_host(){
 
 int admin_container(){
 
-	int admin_container, client_sock, c, read_size, host_port = 9090;
+	int admin_container, client_sock, c, read_size, host_port;
 
 	struct sockaddr_in server , client;
 
@@ -433,21 +410,63 @@ int admin_container(){
 
 				send(client_sock, client_message, strlen(client_message), 0);
 
-				received = 1;
-				
-				/*
+				int fd;
 
-				char * token = strtok(data, " ");
+				char *ptr;
+
+				struct stat shmobj_st;
+
+				fd = shm_open(SHMOBJ_NAME, O_RDONLY, 0);
+
+				if(fd == -1){
+
+					printf("Error file descriptor \n");
+
+					exit(1);
+
+				}
+
+				if(fstat(fd, &shmobj_st) == -1){
+
+					printf("Error fstat \n");
+
+					exit(1);
+
+				}
+
+				ptr = mmap(NULL, shmobj_st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+
+				//ptr es char *
+
+				if(ptr == MAP_FAILED){
+
+					printf("Map failed in read mapping proccess:\n");
+
+					exit(1);
+
+				}
+
+				printf("HOLA SOY LA COSA DE SHARE MEMORY%s\n", ptr);
+
+				//SHARE MEMORY
+
+				char soyUnaVariable[1024];
+
+				strcpy(soyUnaVariable, ptr);
+
+				char * token = strtok(soyUnaVariable, " ");
 
 				int i = 0;
 
-				while( token != NULL ){
+				while(token != NULL){
 
 					if(i == 2){
 
-						printf("HOLA SOY EL PUERTO DEL HOST %s\n", token);
+						printf("ENTRE A 2");
 
-						host_port = atoi(token);			
+						host_port = atoi(token);
+
+						break;	
 
 					}
 
@@ -457,22 +476,9 @@ int admin_container(){
 
 				}
 
-								printf("HOLA SOY EL PUERTO DEL HOST %d\n", host_port);
-
-				*/
-
-			
-
-
-
-				//SHARE MEMORY
-
-
-				
+				printf("HOLA SOY EL PUERTO DEL HOST %d\n", host_port);
 
 				sendHostMessage(client_message, host_port);
-
-
 
 			}
 			
@@ -489,6 +495,28 @@ int admin_container(){
 }
 
 int main() {
+
+	//SHARE MEMORY CREATE
+
+	int fd;
+
+	fd = shm_open(SHMOBJ_NAME, O_CREAT | O_RDWR, 00600);
+
+	if(fd == -1){
+
+		perror("Open");
+		exit(1);
+
+	}
+
+	if(ftruncate(fd, SHMOBJ_SIZE) == -1){
+
+		perror("Share Memory Resize");
+		exit(1);
+
+	}
+
+	//SHARE MEMORY
 
 	pid_t pid;
 
