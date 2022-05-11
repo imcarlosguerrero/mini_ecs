@@ -25,6 +25,8 @@ corren en el host interactuan con el proceso subscribe_host.
 
 #define SHMOBJ_NAME "/myMemoryObj"
 
+#define SHMOBJ_SIZE 200
+
 int getRandomNumber(){
 
 	srand(time(NULL));
@@ -96,7 +98,9 @@ char getRandomHost(){
 
 	int randomHostNumber = getRandomNumber();
 
-	char randomHost[200] = hostsArray[i];
+	char randomHost[200];
+
+	strcpy(randomHost, hostsArray[i]);
 	
     return randomHost;
 
@@ -203,6 +207,28 @@ int subscribe_host(){
 
 	subscribe_host = socket(AF_INET, SOCK_STREAM, 0);
 
+	//SHARE MEMORY
+
+	int fd;
+
+	fd = shm_open(SHMOBJ_NAME, O_CREAT | O_RDWR, 00600);
+
+	if(fd == -1){
+
+		perror("Open");
+		exit(1);
+
+	}
+
+	if(ftruncate(fd, SHMOBJ_SIZE) == -1){
+
+		perror("Share Memory Resize");
+		exit(1);
+
+	}
+
+	//SHARE MEMORY
+
 	if(subscribe_host == -1){
 
 		printf("\n\nElastic Container Service - Subscribe Host: Could not create Socket Server.");
@@ -274,6 +300,11 @@ int subscribe_host(){
 
 				hostNumber++;
 
+				//SHARE MEMORY
+
+
+				//SHARE MEMORY
+
 				fprintf(fp, "host%d %s\n", hostNumber, client_message);
 
 				fclose(fp);
@@ -281,6 +312,39 @@ int subscribe_host(){
 				received = 1;
 
 				send(client_sock, client_message, strlen(client_message), 0);
+
+				
+				/*
+
+				char buff[1024];
+
+				char *ptr;
+
+				fd = shm_open(SHMOBJ_NAME, O_RDWR, 0);
+
+				if(fd == -1){
+
+					perror("Open in Admin_Container ");
+
+
+				}
+
+				strcpy(buff, getRandomHost());
+
+				ptr = mmap(0, sizeof(buff), PROT_WRITE, MAP_SHARED, fd, 0);
+
+				if(ptr == MAP_FAILED){
+
+					perror("Map Failed ");
+
+
+				}
+
+				memcpy(ptr, buff, sizeof(buff));
+
+				close(fd);
+
+				*/
 
 
 			}
@@ -371,38 +435,7 @@ int admin_container(){
 
 				received = 1;
 				
-				/* the size (in bytes) of shared memory object */
-				const int SIZE = 4096;
-				/* name of the shared memory object */
-				const char *name = "OS";
-				/* shared memory file descriptor */
-				int fd;
-				/* pointer to shared memory obect */
-				char *ptr;
-				/* array to receive the data */
-				char data[SIZE];
-
-				fd = shm_open(name, O_RDONLY, 0666);
-				
-				if (fd == -1) {
-					printf("SOY EL DE ADMIN");
-					
-					perror("open");
-					return 10;
-				}
-
-				/* configure the size of the shared memory object */
-				ftruncate (fd, SIZE);
-
-				ptr = (char *) mmap (NULL, SIZE, PROT_READ, MAP_SHARED, fd, 0);
-				if (ptr == MAP_FAILED) {
-					perror("mmap");
-					return 30;
-				}
-
-				// place data into memory
-				memcpy(data, ptr, SIZE);
-				printf("data received: %s\n", data);
+				/*
 
 				char * token = strtok(data, " ");
 
@@ -424,12 +457,22 @@ int admin_container(){
 
 				}
 
+								printf("HOLA SOY EL PUERTO DEL HOST %d\n", host_port);
+
+				*/
+
+			
+
+
+
 				//SHARE MEMORY
 
-				printf("HOLA SOY EL PUERTO DEL HOST %d\n", host_port);
 
+				
 
 				sendHostMessage(client_message, host_port);
+
+
 
 			}
 			

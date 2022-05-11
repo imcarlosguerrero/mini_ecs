@@ -59,6 +59,8 @@ void sendSubscribeHostMessage(char * message){
 
 		printf("\n\nElastic Container Service - Host #%d: Connect failed.", HOST_NUMBER);
 
+		perror("Error ");
+
 	}
 
 	printf("\n\nElastic Container Service - Host #%d: Socket Client connected successfully.", HOST_NUMBER);
