@@ -59,8 +59,6 @@ void sendSubscribeHostMessage(char * message){
 
 		printf("\n\nElastic Container Service - Host #%d: Connect failed.", HOST_NUMBER);
 
-		perror("Error ");
-
 	}
 
 	printf("\n\nElastic Container Service - Host #%d: Socket Client connected successfully.", HOST_NUMBER);
@@ -103,17 +101,19 @@ int checkExistence(char * containerName){
 		}
 	}
 
+	printf("WORD EXISTE VALUE %d", wordExist);
+
 	fclose(filePointer);
 
-	if(wordExist == 1){
+	if(wordExist == 0){
 
-		return 1;
+		return 0;
 
 	}
 
-	else {
+	else if(wordExist == 1) {
 
-		return 0;
+		return 1;
 
 	}
 
@@ -176,9 +176,11 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 	if(pid == 0){
 
+		containerExistence = checkExistence(containerName);
+
 		if(strcmp(clientRequest, "create") == 0){
 
-			containerExistence = checkExistence(containerName);
+			printf("CHECK EXISTENCE VALUE %d", containerExistence);
 
 			if(containerExistence == 0){
 
@@ -190,8 +192,6 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 		else if(strcmp(clientRequest, "stop") == 0){
 
-			containerExistence = checkExistence(containerName);
-
 			if(containerExistence == 1){
 
 				execlp("docker", "docker", "stop", containerName, NULL);
@@ -201,8 +201,6 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 		}
 
 		else if(strcmp(clientRequest, "remove") == 0){
-
-			containerExistence = checkExistence(containerName);
 
 			if(containerExistence == 1){
 
@@ -222,15 +220,17 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 	else{
 
-		if(strcmp(clientRequest, "create") == 0){
+		containerExistence = checkExistence(containerName);
 
-			containerExistence = checkExistence(containerName);
+		if(strcmp(clientRequest, "create") == 0){
 
 			if(containerExistence == 0){
 
 				FILE *fp = fopen(filename, "a");
 
-				fprintf(fp, "host1 %s\n", containerName);
+				fprintf(fp, "host2 %s\n", containerName);
+
+				wait(10);
 
 				fclose(fp);
 
@@ -250,8 +250,6 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 			//REVISAR SI CONTAINER CORRIENDO O DETENIDO (FUNCION)
 
-			containerExistence = checkExistence(containerName);
-
 			if(containerExistence == 1){
 
 				sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ha sido detenido");
@@ -267,8 +265,6 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 		}
 
 		else if(strcmp(clientRequest, "remove") == 0){
-
-			containerExistence = checkExistence(containerName);
 
 			if(containerExistence == 1){
 
@@ -315,6 +311,8 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 				remove(containerList);
 
 				rename(temporalFile, containerList);
+
+				wait(10);
 
 				sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: Contenedor Borrado con Exito.");
 
@@ -422,9 +420,15 @@ int ecs_agent(){
 
 					printf("\n\nElastic Container Service - Host #%d: Request: %s, Container Name: %s\n\n", HOST_NUMBER, clientRequest, containerName);
 
+					dockerExecutions(client_sock, clientRequest, containerName);
+
 				}
 
-				dockerExecutions(client_sock, clientRequest, containerName);
+				else{
+					
+					dockerExecutions(client_sock, "list", containerName);
+
+				}
 
 				received = 1;
 

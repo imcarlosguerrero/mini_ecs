@@ -1,6 +1,6 @@
 import ecs_client
 import time
 
-ecs_client.createContainer("Joan")
-ecs_client.createContainer("Steven")
-ecs_client.createContainer("Danna")
+ecs_client.removeContainer("Joan")
+ecs_client.removeContainer("Steven")
+ecs_client.removeContainer("Danna")

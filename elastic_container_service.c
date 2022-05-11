@@ -365,7 +365,7 @@ int subscribe_host(){
 
 int admin_container(){
 
-	int admin_container, client_sock, c, read_size, host_port;
+	int admin_container, client_sock, c, read_size, host_port = 9090;
 
 	struct sockaddr_in server , client;
 
