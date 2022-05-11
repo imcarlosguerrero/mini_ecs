@@ -7,38 +7,25 @@ corren en el host interactuan con el proceso subscribe_host.
 
 */
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>	//strlen
-#include<sys/socket.h>
-#include<arpa/inet.h>	//inet_addr
-#include<unistd.h>	//write
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>	//strlen
+#include <sys/socket.h>
+#include <arpa/inet.h>	//inet_addr
+#include <unistd.h>
 #include <time.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
-#include <unistd.h>
 
 #define HOST_NUMBER 200
 
-int randInRange(){
+#define SHMOBJ_NAME "/myMemoryObj"
+
+int getRandomNumber(){
 
 	srand(time(NULL));
 
@@ -59,33 +46,6 @@ int readHosts(){
 
     fptr = fopen(fname, "r");
 
-	//SHARE MEMORY
-
-	const int SIZE = 4096;
-
-	const char *name = "OS";
-
-	char text[SIZE];
-
-	int fd;
-
-    /* pointer to shared memory obect */
-    char *ptr;
-
-	fd = shm_open(name, O_CREAT | O_RDWR, 0666);
-    if (fd == -1) {
-		printf("SOY EL DE HOSTS");
-		perror("open");
-		return 10;
-	}
-
-	/* configure the size of the shared memory object */
-    ftruncate (fd, SIZE);
-
-	ptr = (char *) mmap (0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-	//SHARE MEMORY
-	
     while(fgets(hostsArray[i], 2000, fptr)){
 
         hostsArray[i][strlen(hostsArray[i]) - 1] = '\0';
@@ -98,24 +58,47 @@ int readHosts(){
 
 	printf("\n\nElastic Container Service - Subscribe Host: Los Hosts Disponibles son: \n\n");
 
-	int randomHost = randInRange();
-	
-	strcpy(text, hostsArray[randomHost]);
+	for(int i = 0; i < tot; i++){
 
-	/* write to the shared memory object */
-	sprintf(ptr, "%s", text);
+		printf(" %s\n", hostsArray[i]);
 
-	ptr += strlen(text);
+		printf("\n");
 
-	printf("sent message: %s\n", text);
-
-	return randomHost;
-
-	printf(" %s\n", hostsArray[randomHost]);
-
-    printf("\n");
+	}
 
     return 0;
+
+}
+
+char getRandomHost(){
+
+	char hostsArray[HOST_NUMBER][HOST_NUMBER];
+
+    FILE *fptr = NULL; 
+
+    int i = 0;
+
+    int tot = 0;
+
+	char fname[20] = "hosts.txt";
+
+    fptr = fopen(fname, "r");
+
+    while(fgets(hostsArray[i], 2000, fptr)){
+
+        hostsArray[i][strlen(hostsArray[i]) - 1] = '\0';
+
+        i++;
+
+    }
+
+    tot = i;
+
+	int randomHostNumber = getRandomNumber();
+
+	char randomHost[200] = hostsArray[i];
+	
+    return randomHost;
 
 }
 
