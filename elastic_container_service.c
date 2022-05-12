@@ -518,7 +518,18 @@ int admin_container(){
 
 					else if(strcmp(clientRequest, "start") == 0){
 
-						
+						if(containerExistence == 1){
+
+							printf("\nElastic Container Service - Admin Container: El contenedor ha sido detenido.\n");
+
+						}
+
+						else{
+
+							printf("\nElastic Container Service - Admin Container: El contenedor no existe.\n");
+
+						}
+
 
 					}
 
