@@ -210,12 +210,6 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 		}
 
-		else if(strcmp(clientRequest, "list") == 0){
-
-			execlp("docker", "docker", "ps", NULL);
-
-		}
-
 	}
 
 	else{
@@ -326,12 +320,6 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 		}
 
-		else if(strcmp(clientRequest, "list") == 0){
-
-			printf("\n\nLista de Contenedores\n\n");
-
-		}
-
 	}
 
 	wait(NULL);
@@ -421,12 +409,6 @@ int ecs_agent(){
 					printf("\n\nElastic Container Service - Host #%d: Request: %s, Container Name: %s\n\n", HOST_NUMBER, clientRequest, containerName);
 
 					dockerExecutions(client_sock, clientRequest, containerName);
-
-				}
-
-				else{
-					
-					dockerExecutions(client_sock, "list", containerName);
 
 				}
 

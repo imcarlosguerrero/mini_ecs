@@ -230,7 +230,7 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 				fprintf(fp, "host2 %s\n", containerName);
 
-				wait(10);
+				sleep(0.10);
 
 				fclose(fp);
 
@@ -312,7 +312,7 @@ int dockerExecutions(int client_sock, char * clientRequest, char * containerName
 
 				rename(temporalFile, containerList);
 
-				wait(10);
+				sleep(0.10);
 
 				sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: Contenedor Borrado con Exito.");
 

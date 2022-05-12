@@ -34,7 +34,7 @@ int getRandomNumber(){
 	return(rand() % 2);
 }
 
-int readHosts(){
+int readContainers(){
 
 	char hostsArray[HOST_NUMBER][HOST_NUMBER];
 
@@ -44,7 +44,7 @@ int readHosts(){
 
     int tot = 0;
 
-	char fname[20] = "hosts.txt";
+	char fname[20] = "containers.txt";
 
     fptr = fopen(fname, "r");
 
@@ -58,7 +58,7 @@ int readHosts(){
 
     tot = i;
 
-	printf("\n\nElastic Container Service - Subscribe Host: Los Hosts Disponibles son: \n\n");
+	printf("\nElastic Container Service - Subscribe Host: Los Contenedores Activos Son: \n\n");
 
 	for(int i = 0; i < tot; i++){
 
@@ -77,8 +77,6 @@ int readHosts(){
 int sendHostMessage(char * client_message, int port){
 
 	int sock;
-
-	printf("HOLA SOY EL PUERTO DE SEND %d\n", port);
 
 	struct sockaddr_in server;
 
@@ -446,8 +444,6 @@ int admin_container(){
 
 				}
 
-				printf("HOLA SOY LA COSA DE SHARE MEMORY%s\n", ptr);
-
 				//SHARE MEMORY
 
 				char soyUnaVariable[1024];
@@ -462,8 +458,6 @@ int admin_container(){
 
 					if(i == 2){
 
-						printf("ENTRE A 2");
-
 						host_port = atoi(token);
 
 						break;	
@@ -476,9 +470,157 @@ int admin_container(){
 
 				}
 
-				printf("HOLA SOY EL PUERTO DEL HOST %d\n", host_port);
+				char clientRequest[200];
 
-				sendHostMessage(client_message, host_port);
+				char containerName[200];
+
+				char * client_message_split = strtok(client_message, " ");
+
+				strcpy(clientRequest, client_message_split);
+
+				if(strcmp(clientRequest, "list") != 0){
+
+					//DETECTAR QUE TIPO DE PETICION ES PARA VER SI HAY QUE EVALUAR EN QUE HOST ESTA EL CONTENEDOR
+
+					//A REALIZARLE CREATE, STOP, START O REMOVE
+
+					client_message_split = strtok(NULL, " ");
+
+					strcpy(containerName, client_message_split);
+
+					//DELIMITADOR
+
+					containerExistence = checkExistence(containerName);
+
+					if(strcmp(clientRequest, "create") == 0){
+
+						if(containerExistence == 0){
+
+							FILE *fp = fopen(filename, "a");
+
+							fprintf(fp, "host %s\n", containerName);
+
+							sleep(0.10);
+
+							fclose(fp);
+
+							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ha sido creado.");
+
+						}
+
+						else{
+
+							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ya existe.");
+
+						}
+
+					}
+
+					else if(strcmp(clientRequest, "start") == 0){
+
+						
+
+					}
+
+					else if(strcmp(clientRequest, "stop") == 0){
+
+						//REVISAR SI CONTAINER CORRIENDO O DETENIDO (FUNCION)
+
+						if(containerExistence == 1){
+
+							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ha sido detenido");
+
+						}
+
+						else{
+
+							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor no existe.");
+
+						}
+
+					}
+
+					else if(strcmp(clientRequest, "remove") == 0){
+
+						if(containerExistence == 1){
+
+							int line, lineCounter = 0;
+
+							FILE *containerListPointer, *temporalFilePointer;
+
+							char temporalString[256];
+
+							char containerList[] = "containers.txt", temporalFile[] = "temporal.txt";
+
+							containerListPointer = fopen(containerList, "r");
+
+							temporalFilePointer = fopen(temporalFile, "w");
+							
+							line = getContainerLine(containerName);
+							
+							printf("%d", line);
+
+							while(!feof(containerListPointer)){
+
+								strcpy(temporalString, "\0");
+
+								fgets(temporalString, 256, containerListPointer);
+
+								if(!feof(containerListPointer)){
+
+									lineCounter++;
+								
+									if(lineCounter != line){
+
+										fprintf(temporalFilePointer, "%s", temporalString);
+
+									}
+
+								}
+
+							}
+
+							fclose(containerListPointer);
+
+							fclose(temporalFilePointer);
+
+							remove(containerList);
+
+							rename(temporalFile, containerList);
+
+							sleep(0.10);
+
+							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: Contenedor Borrado con Exito.");
+
+						}
+
+						else{
+
+							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor no existe.");
+
+						}
+
+					}
+
+					
+					
+
+					
+
+					printf("\n\nElastic Container Service - Host #%d: Request: %s, Container Name: %s\n\n", HOST_NUMBER, clientRequest, containerName);
+
+					sendHostMessage(client_message, host_port);
+
+				}
+
+				else{
+
+					readContainers();
+
+				}
+
+				received = 1;
+
 
 			}
 			
