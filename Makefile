@@ -8,6 +8,10 @@ all: elastic_container_service host_1 host_2
 elastic_container_service: elastic_container_service.o
 	gcc -o elastic_container_service elastic_container_service.o -lrt && ./elastic_container_service && make clean
 
+main: main.o
+
+	gcc -o main main.o && ./main
+
 host_1: host_1.o
 	gcc -o host_1 host_1.o && ./host_1 && make clean
 

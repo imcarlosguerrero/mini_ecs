@@ -34,6 +34,51 @@ int getRandomNumber(){
 	return(rand() % 2);
 }
 
+int getContainerLine(char * containerName){
+
+	FILE* filePointer;
+
+	int wordExist = 0;
+
+	int bufferLength = 255;
+
+	char line[bufferLength];
+
+	int lineCounter = 0;
+
+	filePointer = fopen("containers.txt", "r");
+
+	while(fgets(line, bufferLength, filePointer)){
+
+		lineCounter++;
+
+		char *ptr = strstr(line, containerName);
+
+		if(ptr != NULL){
+
+			wordExist = 1;
+
+			break;
+
+		}
+	}
+
+	fclose(filePointer);
+
+	if(wordExist == 1){
+
+		return lineCounter;
+
+	}
+
+	else {
+
+		return lineCounter;
+
+	}
+
+}
+
 int readContainers(){
 
 	char hostsArray[HOST_NUMBER][HOST_NUMBER];
@@ -490,11 +535,13 @@ int admin_container(){
 
 					//DELIMITADOR
 
-					containerExistence = checkExistence(containerName);
+					int containerExistence = checkExistence(containerName);
 
 					if(strcmp(clientRequest, "create") == 0){
 
 						if(containerExistence == 0){
+
+							char *filename = "containers.txt";
 
 							FILE *fp = fopen(filename, "a");
 
@@ -504,13 +551,10 @@ int admin_container(){
 
 							fclose(fp);
 
-							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ha sido creado.");
-
 						}
 
 						else{
 
-							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ya existe.");
 
 						}
 
@@ -539,13 +583,9 @@ int admin_container(){
 
 						if(containerExistence == 1){
 
-							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor ha sido detenido");
-
 						}
 
 						else{
-
-							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor no existe.");
 
 						}
 
@@ -599,15 +639,13 @@ int admin_container(){
 
 							rename(temporalFile, containerList);
 
-							sleep(0.10);
-
-							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: Contenedor Borrado con Exito.");
+							sleep(0.10);							
 
 						}
 
 						else{
 
-							sendSubscribeHostMessage("\n\nElastic Container Service - Host #2: El contenedor no existe.");
+							
 
 						}
 
