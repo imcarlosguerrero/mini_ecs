@@ -1,7 +1,0 @@
-host1 Steven Stopped
-host1 Fabian Stopped
-host1 Juan Stopped
-host3 Martin Stopped
-host3 Manuel Stopped
-host3 Laura Stopped
-host3 Danna Stopped

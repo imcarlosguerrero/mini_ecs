@@ -493,91 +493,7 @@ int admin_container(){
 
                 printf("\nElastic Container Service - Admin Container: Received Request: %s\n", ecs_client_message);
 
-				//Share Memory Read
 
-				int fd;
-
-				char *ptr;
-
-				struct stat shmobj_st;
-
-                fd = shm_open(SHM_OBJ_NAME, O_RDONLY, 0);
-
-				if(fd == -1){
-
-					printf("\nShare Memory Read: Error File Descriptor.\n");
-
-					exit(1);
-
-				}
-
-				if(fstat(fd, &shmobj_st) == -1){
-
-					printf("\nShare Memory Read: Error on Fstat.\n");
-
-					exit(1);
-
-				}
-
-				ptr = mmap(NULL, shmobj_st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-
-				if(ptr == MAP_FAILED){
-
-					printf("\nShare Memory Read: Map Failed.\n");
-
-					exit(1);
-
-				}
-
-                //Share Memory Read
-
-                //Uso del host tomado de la Share Memory
-
-				strcpy(selectedHost, ptr);
-
-				char * token = strtok(selectedHost, " ");
-
-				int i = 0;
-
-				while(token != NULL){
-
-                    if(i == 0){
-
-                        strcpy(hostName, token);
-
-                    }
-
-					if(i == 2){
-
-                        //Se saca el puerto del host seleccionado
-
-						hostPort = atoi(token);
-
-						break;	
-
-					}
-
-					token = strtok(NULL, " ");
-
-					i++;
-
-				}
-
-                //Ejecuciones de las peticiones del ecs_client
-
-                char ecs_client_message_no_split[DEFAULT_SIZE];
-
-                strcpy(ecs_client_message_no_split, ecs_client_message);
-
-                char * client_message_split = strtok(ecs_client_message, " ");
-
-                strcpy(clientRequest, client_message_split);
-
-                client_message_split = strtok(NULL, " ");
-
-                strcpy(containerName, client_message_split);
-
-                int containerExistence = checkExistence(containerName);
 
                 if(strcmp(clientRequest, "list") == 0){
 
@@ -586,6 +502,92 @@ int admin_container(){
                 }
 
                 else if(strcmp(clientRequest, "create") == 0){
+
+					//Share Memory Read
+
+					int fd;
+
+					char *ptr;
+
+					struct stat shmobj_st;
+
+					fd = shm_open(SHM_OBJ_NAME, O_RDONLY, 0);
+
+					if(fd == -1){
+
+						printf("\nShare Memory Read: Error File Descriptor.\n");
+
+						exit(1);
+
+					}
+
+					if(fstat(fd, &shmobj_st) == -1){
+
+						printf("\nShare Memory Read: Error on Fstat.\n");
+
+						exit(1);
+
+					}
+
+					ptr = mmap(NULL, shmobj_st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+
+					if(ptr == MAP_FAILED){
+
+						printf("\nShare Memory Read: Map Failed.\n");
+
+						exit(1);
+
+					}
+
+					//Share Memory Read
+
+					//Uso del host tomado de la Share Memory
+
+					strcpy(selectedHost, ptr);
+
+					char * token = strtok(selectedHost, " ");
+
+					int i = 0;
+
+					while(token != NULL){
+
+						if(i == 0){
+
+							strcpy(hostName, token);
+
+						}
+
+						if(i == 2){
+
+							//Se saca el puerto del host seleccionado
+
+							hostPort = atoi(token);
+
+							break;	
+
+						}
+
+						token = strtok(NULL, " ");
+
+						i++;
+
+					}
+
+					//Ejecuciones de las peticiones del ecs_client
+
+					char ecs_client_message_no_split[DEFAULT_SIZE];
+
+					strcpy(ecs_client_message_no_split, ecs_client_message);
+
+					char * client_message_split = strtok(ecs_client_message, " ");
+
+					strcpy(clientRequest, client_message_split);
+
+					client_message_split = strtok(NULL, " ");
+
+					strcpy(containerName, client_message_split);
+
+					int containerExistence = checkExistence(containerName);
 
                     if(containerExistence == 0){
 
