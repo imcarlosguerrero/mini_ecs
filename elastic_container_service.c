@@ -169,6 +169,137 @@ int getLineHost(char * hostName){
 
 }
 
+int getLineHostSpecial(char * hostName){
+
+	FILE* filePointer;
+
+	int wordExist = 0;
+
+	int bufferLength = 255;
+
+	char line[bufferLength];
+
+	int lineCounter = 0;
+
+	filePointer = fopen("hosts.txt", "r");
+
+	while(fgets(line, bufferLength, filePointer)){
+
+		char *ptr = strstr(line, hostName);
+
+		if(ptr != NULL){
+
+			wordExist = 1;
+
+			break;
+
+		}
+
+		lineCounter++;
+	}
+
+	fclose(filePointer);
+
+	if(wordExist == 1){
+
+		return lineCounter;
+
+	}
+
+	else {
+
+		return lineCounter;
+
+	}
+
+}
+
+int getContainerHostPort(char * containerName){
+
+	int lineNumber = getContainerLine(containerName), lineCounter = 0;
+
+	static const char filename[] = "containers.txt";
+
+	FILE *file = fopen(filename, "r");
+
+	char line[DEFAULT_SIZE];
+
+    int count = 0;
+
+	while(fgets(line, sizeof line, file) != NULL){   
+
+		if(count == lineNumber){   
+
+			printf("\n str %s ", line);
+
+			break;
+
+		}   
+
+		else{   
+
+			count++;
+
+		}   
+
+	}  
+
+	fclose(file);
+
+	char * token = strtok(line, " ");
+
+	char hostName[DEFAULT_SIZE];
+
+	strcpy(hostName, token);
+
+	int lineHostNumber = getLineHostSpecial(hostName);
+
+	static const char hFilename[] = "hosts.txt";
+
+	FILE *hFile = fopen(hFilename, "r");
+
+	char lineHost[DEFAULT_SIZE];
+
+    count = 0;
+
+	while(fgets(lineHost, sizeof lineHost, file) != NULL){   
+
+		if(count == lineHostNumber){   
+
+			printf("\n str %s ", lineHost);
+
+			break;
+
+		}   
+
+		else{   
+
+			count++;
+
+		}   
+
+	}  
+
+	fclose(file);
+
+	char * hToken = strtok(lineHost, " ");
+
+	hToken = strtok(NULL, " ");
+
+	hToken = strtok(NULL, " ");
+
+	char hostPort[DEFAULT_SIZE];
+
+	strcpy(hostPort, hToken);
+
+	int realHostPort = atoi(hostPort);
+
+	printf("%d\n", realHostPort);
+
+	return realHostPort;
+
+}
+
 void sendHostRequest(char * client_message, int hostPort){
 
     //Creación del Socket Client del adminContainer para comunicarse con los diferentes host. 
@@ -253,6 +384,8 @@ void listContainers(){
     printf("\n\n");
 
 }
+
+
 
 void subscribe_host(){
 
@@ -493,7 +626,19 @@ int admin_container(){
 
                 printf("\nElastic Container Service - Admin Container: Received Request: %s\n", ecs_client_message);
 
+				char ecs_client_message_no_split[DEFAULT_SIZE];
 
+				strcpy(ecs_client_message_no_split, ecs_client_message);
+
+				char * client_message_split = strtok(ecs_client_message, " ");
+
+				strcpy(clientRequest, client_message_split);
+
+				client_message_split = strtok(NULL, " ");
+
+				strcpy(containerName, client_message_split);
+
+				int containerExistence = checkExistence(containerName);
 
                 if(strcmp(clientRequest, "list") == 0){
 
@@ -575,20 +720,6 @@ int admin_container(){
 
 					//Ejecuciones de las peticiones del ecs_client
 
-					char ecs_client_message_no_split[DEFAULT_SIZE];
-
-					strcpy(ecs_client_message_no_split, ecs_client_message);
-
-					char * client_message_split = strtok(ecs_client_message, " ");
-
-					strcpy(clientRequest, client_message_split);
-
-					client_message_split = strtok(NULL, " ");
-
-					strcpy(containerName, client_message_split);
-
-					int containerExistence = checkExistence(containerName);
-
                     if(containerExistence == 0){
 
                         sendHostRequest(ecs_client_message_no_split, hostPort);
@@ -617,7 +748,9 @@ int admin_container(){
 
                     if(containerExistence == 1){
 
-                        sendHostRequest(ecs_client_message_no_split, hostPort);
+						int hostContainerPort = getContainerHostPort(containerName);
+
+                        sendHostRequest(ecs_client_message_no_split, hostContainerPort);
 
                         int line = getContainerLine(containerName), lineCounter = 0;
 
@@ -675,6 +808,8 @@ int admin_container(){
 
                     if(containerExistence == 1){
 
+						int hostContainerPort = getContainerHostPort(containerName);
+
                         int line = getContainerLine(containerName), lineCounter = 0;
 
                         FILE *containerListPointer, *temporalFilePointer;
@@ -714,15 +849,6 @@ int admin_container(){
 
                                 int lineHost = getLineHost(containerHost);
 
-                                
-
-
-
-
-
-
-
-
                                 token = strtok(NULL, " ");
 
                                 strcpy(containerNameID, token);
@@ -741,7 +867,7 @@ int admin_container(){
 
                                 else{
 
-                                    sendHostRequest(ecs_client_message_no_split, hostPort);
+                                    sendHostRequest(ecs_client_message_no_split, hostContainerPort);
 
                                     strcat(containerHost, " ");
 
@@ -774,6 +900,8 @@ int admin_container(){
                 else if(strcmp(clientRequest, "stop") == 0){
 
                     if(containerExistence == 1){
+
+						int hostContainerPort = getContainerHostPort(containerName);
 
                         int line = getContainerLine(containerName), lineCounter = 0;
 
@@ -827,7 +955,7 @@ int admin_container(){
 
                                 else{
 
-                                    sendHostRequest(ecs_client_message_no_split, hostPort);
+                                    sendHostRequest(ecs_client_message_no_split, hostContainerPort);
 
                                     strcat(containerHost, " ");
 
