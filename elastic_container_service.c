@@ -28,13 +28,6 @@
 
 #define MAX_REQUEST_NUMBER 100
 
-int getRandomNumber(int hostNumber){
-
-	srand(time(NULL));
-
-	return(rand() % hostNumber);
-}
-
 int checkExistence(char * containerName){
 
 	FILE* filePointer;
@@ -470,6 +463,8 @@ void subscribe_host(){
 
 				hostNumber++;
 
+				
+
 				fprintf(fp, "host%d %s\n", hostNumber, client_message);
 
 				fclose(fp);
@@ -516,9 +511,11 @@ void subscribe_host(){
 
 				char randomHost[200];
 
-				i = getRandomNumber(hostNumber);
+				srand(time(NULL));
 
-				strcpy(randomHost, hostsArray[i]);
+				int randomHostNumber = rand() % hostNumber;
+
+				strcpy(randomHost, hostsArray[randomHostNumber]);
 
 				strcpy(buff, randomHost);
 
