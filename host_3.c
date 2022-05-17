@@ -7,11 +7,11 @@
 #include<string.h>
 #include<sys/wait.h>
 
-#define HOST_NUMBER 1
+#define HOST_NUMBER 3
 
-#define PORT 8080
+#define PORT 9091
 
-#define HOST_INADDR "127.0.0.0 8080"
+#define HOST_INADDR "127.0.0.0 9091"
 
 #define SUBSCRIBE_HOST_PORT 6060
 

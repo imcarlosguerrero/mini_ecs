@@ -1,12 +1,3 @@
-/*
-
-elastic-container-service Este servicio es el encargado de recibir las peticiones del cliente y ejecutarlas. Este servicio constara de dos procesos, el admin_container y el subscribe_host, los cuales se crearan usando fork.
-El admin_container es el proceso encargado de recibir las peticiones para manejar los contenedores (crear, listar, detener y borrar contenedores). El subscribe_host, es un proceso encargado de recibir peticiones desde los hosts y lleva
-un control de los hosts disponibles para crear contenedores. Solo los agentes que
-corren en el host interactuan con el proceso subscribe_host.
-
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>	//strlen
@@ -23,15 +14,69 @@ corren en el host interactuan con el proceso subscribe_host.
 
 #define HOST_NUMBER 200
 
-#define SHMOBJ_NAME "/myMemoryObj"
+#define SHM_OBJ_NAME "/myMemoryObj"
 
-#define SHMOBJ_SIZE 200
+#define SHM_OBJ_SIZE 200
 
-int getRandomNumber(){
+#define MESSAGE_SIZE 2048
+
+#define DEFAULT_SIZE 1024
+
+#define ADMIN_CONTAINER_PORT 7070
+
+#define SUBSCRIBE_HOST_PORT 6060
+
+#define MAX_REQUEST_NUMBER 100
+
+int getRandomNumber(int hostNumber){
 
 	srand(time(NULL));
 
-	return(rand() % 2);
+	return(rand() % hostNumber);
+}
+
+int checkExistence(char * containerName){
+
+	FILE* filePointer;
+
+	int wordExist = 0;
+
+	int bufferLength = 255;
+
+	char line[bufferLength];
+
+	int lineCounter = 0;
+
+	filePointer = fopen("containers.txt", "r");
+
+	while(fgets(line, bufferLength, filePointer)){
+
+		lineCounter++;
+
+		char *ptr = strstr(line, containerName);
+
+		if(ptr != NULL){
+
+			wordExist = 1;
+
+			break;
+		}
+	}
+
+	fclose(filePointer);
+
+	if(wordExist == 0){
+
+		return 0;
+
+	}
+
+	else if(wordExist == 1) {
+
+		return 1;
+
+	}
+
 }
 
 int getContainerLine(char * containerName){
@@ -79,94 +124,7 @@ int getContainerLine(char * containerName){
 
 }
 
-int readContainers(){
-
-	char hostsArray[HOST_NUMBER][HOST_NUMBER];
-
-    FILE *fptr = NULL; 
-
-    int i = 0;
-
-    int tot = 0;
-
-	char fname[20] = "containers.txt";
-
-    fptr = fopen(fname, "r");
-
-    while(fgets(hostsArray[i], 2000, fptr)){
-
-        hostsArray[i][strlen(hostsArray[i]) - 1] = '\0';
-
-        i++;
-
-    }
-
-    tot = i;
-
-	printf("\nElastic Container Service - Subscribe Host: Los Contenedores Activos Son: \n\n");
-
-	for(int i = 0; i < tot; i++){
-
-		printf(" %s\n", hostsArray[i]);
-
-		printf("\n");
-
-	}
-
-    return 0;
-
-}
-
-
-
-int sendHostMessage(char * client_message, int port){
-
-	int sock;
-
-	struct sockaddr_in server;
-
-	char message[200], server_reply[50];
-
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-
-	if(sock == -1){
-
-		printf("\n\nElastic Container Service - Subscribe Host: Could not create Socket Server.");
-
-	}
-
-	printf("\n\nElastic Container Service - Subscribe Host: Socket Client created successfully.");
-
-	
-
-	server.sin_family = AF_INET;
-
-	server.sin_addr.s_addr = INADDR_ANY;
-
-	server.sin_port = htons(port);
-
-	sleep(1);
-
-	if(connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0){
-
-		perror("\n\nElastic Container Service - Subscribe Host: Connect failed. Error");
-
-		return 1;
-	}
-
-	printf("\n\nElastic Container Service - Subscribe Host: Connected.");
-
-	memset(message, 0, 200);
-
-    strcpy(message, client_message);
-
-    send(sock, message, strlen(message), 0);
-
-	close(sock);
-
-}
-
-int checkExistence(char * containerName){
+int getLineHost(char * hostName){
 
 	FILE* filePointer;
 
@@ -184,13 +142,14 @@ int checkExistence(char * containerName){
 
 		lineCounter++;
 
-		char *ptr = strstr(line, containerName);
+		char *ptr = strstr(line, hostName);
 
 		if(ptr != NULL){
 
 			wordExist = 1;
 
 			break;
+
 		}
 	}
 
@@ -198,19 +157,104 @@ int checkExistence(char * containerName){
 
 	if(wordExist == 1){
 
-		return 1;
+		return lineCounter;
 
 	}
 
 	else {
 
-		return 0;
+		return lineCounter;
 
 	}
 
 }
 
-int subscribe_host(){
+void sendHostRequest(char * client_message, int hostPort){
+
+    //Creación del Socket Client del adminContainer para comunicarse con los diferentes host. 
+
+	int sock;
+
+	struct sockaddr_in server;
+
+	char message[MESSAGE_SIZE], server_reply[MESSAGE_SIZE];
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+
+	if(sock == -1){
+
+		printf("\nElastic Container Service - Admin Container: Could not create Socket Server.\n");
+
+        exit(1);
+
+	}
+
+	printf("\nElastic Container Service - Admin Container: Socket Client created successfully.\n");
+
+	server.sin_family = AF_INET;
+
+	server.sin_addr.s_addr = INADDR_ANY;
+
+	server.sin_port = htons(hostPort);
+
+	if(connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0){
+
+		printf("\nElastic Container Service - Admin Container: Connect Failed.\n");
+
+		exit(1);
+	}
+
+	printf("\nElastic Container Service - Subscribe Host: Connected.\n");
+
+	memset(message, 0, MESSAGE_SIZE);
+
+    strcpy(message, client_message);
+
+    send(sock, message, strlen(message), 0);
+
+	close(sock);
+
+}
+
+void listContainers(){
+
+	char hostsArray[HOST_NUMBER][HOST_NUMBER];
+
+    FILE *fptr = NULL; 
+
+    int i = 0;
+
+    int tot = 0;
+
+	char fname[DEFAULT_SIZE] = "containers.txt";
+
+    fptr = fopen(fname, "r");
+
+    while(fgets(hostsArray[i], MESSAGE_SIZE, fptr)){
+
+        hostsArray[i][strlen(hostsArray[i]) - 1] = '\0';
+
+        i++;
+
+    }
+
+    tot = i;
+
+	printf("\nElastic Container Service - Admin Container: Los Contenedores Activos Son:\n\n");
+
+	for(int i = 0; i < tot; i++){
+
+		printf(" %s\n", hostsArray[i]);
+
+		printf("\n");
+
+	}
+
+    printf("\n\n");
+
+}
+
+void subscribe_host(){
 
 	int hostNumber = 0;
 
@@ -218,19 +262,19 @@ int subscribe_host(){
 
 	struct sockaddr_in server, client;
 
-	char client_message[2000];
-
-	int received = 0;
+	char client_message[MESSAGE_SIZE];
 
 	subscribe_host = socket(AF_INET, SOCK_STREAM, 0);
 
 	if(subscribe_host == -1){
 
-		printf("\n\nElastic Container Service - Subscribe Host: Could not create Socket Server.");
+		printf("\nElastic Container Service - Subscribe Host: Could not create Socket Server.\n");
+
+        exit(1);
 
 	}
 
-	printf("\n\nElastic Container Service - Subscribe Host: Socket Server created successfully.");
+	printf("\nElastic Container Service - Subscribe Host: Socket Server created successfully.\n");
 
 	char *filename = "hosts.txt";
 
@@ -238,21 +282,21 @@ int subscribe_host(){
 
 	server.sin_addr.s_addr = INADDR_ANY;
 
-	server.sin_port = htons(6060);
+	server.sin_port = htons(SUBSCRIBE_HOST_PORT);
 
 	if(bind(subscribe_host, (struct sockaddr *) &server, sizeof(server)) < 0){
 
-		perror("\n\nElastic Container Service - Subscribe Host: Socket Server bind failed. Error");
+		printf("\nElastic Container Service - Subscribe Host: Socket Server Bind Failed.\n");
 
 	}
 
-	printf("\n\nElastic Container Service - Subscribe Host: Socket Server bind done.");
+	printf("\nElastic Container Service - Subscribe Host: Socket Server Bind Done.\n");
 
 	while(1){
 
 		listen(subscribe_host, 10);
 
-		printf("\n\nElastic Container Service - Subscribe Host: Waiting for incoming connections...");
+		printf("\nElastic Container Service - Subscribe Host: Waiting for incoming connections...\n");
 
 		c = sizeof(struct sockaddr_in);
 
@@ -260,9 +304,9 @@ int subscribe_host(){
 
 		if(client_sock < 0){
 
-			perror("\n\nElastic Container Service - Subscribe Host: Accept failed.");
+			printf("\nElastic Container Service - Subscribe Host: Accept failed.\n");
 
-			return 1;
+			exit(1);
 
 		}
 
@@ -286,9 +330,9 @@ int subscribe_host(){
 
 				if(fp == NULL){
 		
-					printf("\n\nElastic Container Service - Subscribe Host: Error opening the file %s", filename);
+					printf("\nElastic Container Service - Subscribe Host: Error opening the file %s", filename);
 
-					return -1;
+					exit(1);
 				}
 
 				hostNumber++;
@@ -296,9 +340,6 @@ int subscribe_host(){
 				fprintf(fp, "host%d %s\n", hostNumber, client_message);
 
 				fclose(fp);
-
-				received = 1;
-
 
 				//RANDOM HOST AND SEND TO SHARE MEMORY
 
@@ -308,14 +349,13 @@ int subscribe_host(){
 
 				char *ptr;
 
-				fd = shm_open(SHMOBJ_NAME, O_RDWR, 0);
+				fd = shm_open(SHM_OBJ_NAME, O_RDWR, 0);
 
 				if(fd == -1){
  
-					perror("Open in Subscribe_Host");
+					printf("\nShare Memory Write: Failed Opening.\n");
 
 					exit(1);
-
 
 				}
 
@@ -343,7 +383,7 @@ int subscribe_host(){
 
 				char randomHost[200];
 
-				i = getRandomNumber();
+				i = getRandomNumber(hostNumber);
 
 				strcpy(randomHost, hostsArray[i]);
 
@@ -353,7 +393,7 @@ int subscribe_host(){
 
 				if(ptr == MAP_FAILED){
 
-					perror("Map Failed ");
+					printf("Share Memory Write: Map Failed.\n");
 
 					exit(1);
 
@@ -373,85 +413,87 @@ int subscribe_host(){
 		
 		else{
 
-			printf("\n\nElastic Container Service - Subscribe Host: Received failed.");
+			printf("\nElastic Container Service - Subscribe Host: Received Failed.\n");
 
 		}
 	
 	}
-
-	
 
 }
 
 int admin_container(){
 
-	int admin_container, client_sock, c, read_size, host_port;
+    //Levantar el Socket Server de adminContainer
 
-	struct sockaddr_in server , client;
+	int admin_container, ecs_client_sock, c, read_size, hostPort = 0, receivedMessage = 0;;
 
-	char client_message[2000];
+	struct sockaddr_in server, client;
 
-	int received = 0;
+	char ecs_client_message[MESSAGE_SIZE], selectedHost[DEFAULT_SIZE],hostName[DEFAULT_SIZE], clientRequest[DEFAULT_SIZE], containerName[DEFAULT_SIZE];
 
 	admin_container = socket(AF_INET, SOCK_STREAM , 0);
 
 	if(admin_container == -1){
 
-		printf("\n\nElastic Container Service - Admin Container: Could not create Socket Server.\n\n");
+		printf("\nElastic Container Service - Admin Container: Could not create Socket Server.\n");
 
 	}
 
-	printf("\n\nElastic Container Service - Admin Container: Socket Server created successfully.");
+	printf("\nElastic Container Service - Admin Container: Socket Server created successfully.\n");
 
 	server.sin_family = AF_INET;
 
 	server.sin_addr.s_addr = INADDR_ANY;
 
-	server.sin_port = htons(7070);
+	server.sin_port = htons(ADMIN_CONTAINER_PORT);
 
 	if(bind(admin_container, (struct sockaddr *) &server, sizeof(server)) < 0){
 
-		perror("\n\nElastic Container Service - Admin Container: Socket Server bind failed. Error");
+		printf("\nElastic Container Service - Admin Container: Socket Server Bind Failed.\n");
 
-		return 1;
+		exit(1);
 
 	}
 
-	printf("\n\nElastic Container Service - Admin Container: Socket Server bind done");
-	
+	printf("\nElastic Container Service - Admin Container: Socket Server Bind Done.\n");
+
+    //Levantar el Socket Server de adminContainer
+
     while(1){
 
-		listen(admin_container, 10);
+        listen(admin_container, MAX_REQUEST_NUMBER);
 
-		printf("\n\nElastic Container Service - Admin Container: Waiting for incoming connections...");
+        printf("\nElastic Container Service - Admin Container: Waiting for Incoming Connections...\n");
 
 		c = sizeof(struct sockaddr_in);
 
-		client_sock = accept(admin_container, (struct sockaddr *) &client, (socklen_t*) &c);
+		ecs_client_sock = accept(admin_container, (struct sockaddr *) &client, (socklen_t*) &c);
 
-		if(client_sock < 0){
+		if(ecs_client_sock < 0){
 
-			perror("\n\nElastic Container Service - Admin Container: Accept failed");
+			printf("\nElastic Container Service - Admin Container: Accept Failed\n");
 
-			return 1;
+			exit(1);
 
 		}
 
-		printf("\n\nElastic Container Service - Admin Container: Connection accepted.");
+		printf("\nElastic Container Service - Admin Container: Connection Accepted.\n");
 
-		received = 0;
+		receivedMessage = 0;
 
-		while(!received){
+        while(!receivedMessage){
 
-			memset(client_message, 0, 2000);
+            sleep(2);
 
-			if(recv(client_sock, client_message, 2000, 0) > 0){
+            memset(ecs_client_message, 0, MESSAGE_SIZE);
 
-				printf("\n\nElastic Container Service - Admin Container: Received message: %s\n", client_message);
+            if(recv(ecs_client_sock, ecs_client_message, MESSAGE_SIZE, 0) > 0){
 
-				received = 1;
+                receivedMessage = 1;
 
-				send(client_sock, client_message, strlen(client_message), 0);
+                printf("\nElastic Container Service - Admin Container: Received Request: %s\n", ecs_client_message);
+
+				//Share Memory Read
 
 				int fd;
 
@@ -459,11 +501,11 @@ int admin_container(){
 
 				struct stat shmobj_st;
 
-				fd = shm_open(SHMOBJ_NAME, O_RDONLY, 0);
+                fd = shm_open(SHM_OBJ_NAME, O_RDONLY, 0);
 
 				if(fd == -1){
 
-					printf("Error file descriptor \n");
+					printf("\nShare Memory Read: Error File Descriptor.\n");
 
 					exit(1);
 
@@ -471,7 +513,7 @@ int admin_container(){
 
 				if(fstat(fd, &shmobj_st) == -1){
 
-					printf("Error fstat \n");
+					printf("\nShare Memory Read: Error on Fstat.\n");
 
 					exit(1);
 
@@ -479,31 +521,37 @@ int admin_container(){
 
 				ptr = mmap(NULL, shmobj_st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 
-				//ptr es char *
-
 				if(ptr == MAP_FAILED){
 
-					printf("Map failed in read mapping proccess:\n");
+					printf("\nShare Memory Read: Map Failed.\n");
 
 					exit(1);
 
 				}
 
-				//SHARE MEMORY
+                //Share Memory Read
 
-				char soyUnaVariable[1024];
+                //Uso del host tomado de la Share Memory
 
-				strcpy(soyUnaVariable, ptr);
+				strcpy(selectedHost, ptr);
 
-				char * token = strtok(soyUnaVariable, " ");
+				char * token = strtok(selectedHost, " ");
 
 				int i = 0;
 
 				while(token != NULL){
 
+                    if(i == 0){
+
+                        strcpy(hostName, token);
+
+                    }
+
 					if(i == 2){
 
-						host_port = atoi(token);
+                        //Se saca el puerto del host seleccionado
+
+						hostPort = atoi(token);
 
 						break;	
 
@@ -515,199 +563,343 @@ int admin_container(){
 
 				}
 
-				char clientRequest[200];
+                //Ejecuciones de las peticiones del ecs_client
 
-				char containerName[200];
+                char ecs_client_message_no_split[DEFAULT_SIZE];
 
-				char * client_message_split = strtok(client_message, " ");
+                strcpy(ecs_client_message_no_split, ecs_client_message);
 
-				strcpy(clientRequest, client_message_split);
+                char * client_message_split = strtok(ecs_client_message, " ");
 
-				if(strcmp(clientRequest, "list") != 0){
+                strcpy(clientRequest, client_message_split);
 
-					//DETECTAR QUE TIPO DE PETICION ES PARA VER SI HAY QUE EVALUAR EN QUE HOST ESTA EL CONTENEDOR
+                client_message_split = strtok(NULL, " ");
 
-					//A REALIZARLE CREATE, STOP, START O REMOVE
+                strcpy(containerName, client_message_split);
 
-					client_message_split = strtok(NULL, " ");
+                int containerExistence = checkExistence(containerName);
 
-					strcpy(containerName, client_message_split);
+                if(strcmp(clientRequest, "list") == 0){
 
-					//DELIMITADOR
+                    listContainers();
 
-					int containerExistence = checkExistence(containerName);
+                }
 
-					if(strcmp(clientRequest, "create") == 0){
+                else if(strcmp(clientRequest, "create") == 0){
 
-						if(containerExistence == 0){
+                    if(containerExistence == 0){
 
-							char *filename = "containers.txt";
+                        sendHostRequest(ecs_client_message_no_split, hostPort);
 
-							FILE *fp = fopen(filename, "a");
+                        char *filename = "containers.txt";
 
-							fprintf(fp, "host %s\n", containerName);
+                        FILE *fp = fopen(filename, "a");
 
-							sleep(0.10);
+                        fprintf(fp, "%s %s Running\n", hostName, containerName);
 
-							fclose(fp);
+                        fclose(fp);
 
-						}
+                        printf("\nElastic Container Service - Admin Container: El contenedor ha sido creado.\n");
 
-						else{
+                    }
 
+                    else{
 
-						}
+                        printf("\nElastic Container Service - Admin Container: El contenedor ya existe.\n");
 
-					}
+                    }
 
-					else if(strcmp(clientRequest, "start") == 0){
+                }
 
-						if(containerExistence == 1){
+                else if(strcmp(clientRequest, "remove") == 0){
 
-							printf("\nElastic Container Service - Admin Container: El contenedor ha sido detenido.\n");
+                    if(containerExistence == 1){
 
-						}
+                        sendHostRequest(ecs_client_message_no_split, hostPort);
 
-						else{
+                        int line = getContainerLine(containerName), lineCounter = 0;
 
-							printf("\nElastic Container Service - Admin Container: El contenedor no existe.\n");
+                        FILE *containerListPointer, *temporalFilePointer;
 
-						}
+                        char temporalString[256];
 
+                        char containerList[] = "containers.txt", temporalFile[] = "temporal.txt";
 
-					}
+                        containerListPointer = fopen(containerList, "r");
 
-					else if(strcmp(clientRequest, "stop") == 0){
+                        temporalFilePointer = fopen(temporalFile, "w");
 
-						//REVISAR SI CONTAINER CORRIENDO O DETENIDO (FUNCION)
+                        while(!feof(containerListPointer)){
 
-						if(containerExistence == 1){
+                            strcpy(temporalString, "\0");
 
-						}
+                            fgets(temporalString, 256, containerListPointer);
 
-						else{
+                            if(!feof(containerListPointer)){
 
-						}
+                                lineCounter++;
+                            
+                                if(lineCounter != line){
 
-					}
+                                    fprintf(temporalFilePointer, "%s", temporalString);
 
-					else if(strcmp(clientRequest, "remove") == 0){
+                                }
 
-						if(containerExistence == 1){
+                            }
 
-							int line, lineCounter = 0;
+                        }
 
-							FILE *containerListPointer, *temporalFilePointer;
+                        fclose(containerListPointer);
 
-							char temporalString[256];
+                        fclose(temporalFilePointer);
 
-							char containerList[] = "containers.txt", temporalFile[] = "temporal.txt";
+                        remove(containerList);
 
-							containerListPointer = fopen(containerList, "r");
+                        rename(temporalFile, containerList);
 
-							temporalFilePointer = fopen(temporalFile, "w");
-							
-							line = getContainerLine(containerName);
-							
-							printf("%d", line);
+                        printf("\nElastic Container Service - Admin Container: Contenedor Borrado con Exito.\n");
 
-							while(!feof(containerListPointer)){
+                    }
 
-								strcpy(temporalString, "\0");
+                    else{
 
-								fgets(temporalString, 256, containerListPointer);
+                        printf("\nElastic Container Service - Admin Container: El contenedor no existe.\n");
 
-								if(!feof(containerListPointer)){
+                    }
 
-									lineCounter++;
-								
-									if(lineCounter != line){
+                }
 
-										fprintf(temporalFilePointer, "%s", temporalString);
+                else if(strcmp(clientRequest, "start") == 0){
 
-									}
+                    if(containerExistence == 1){
 
-								}
+                        int line = getContainerLine(containerName), lineCounter = 0;
 
-							}
+                        FILE *containerListPointer, *temporalFilePointer;
 
-							fclose(containerListPointer);
+                        char temporalString[256];
 
-							fclose(temporalFilePointer);
+                        char containerList[] = "containers.txt", temporalFile[] = "temporal.txt";
 
-							remove(containerList);
+                        containerListPointer = fopen(containerList, "r");
 
-							rename(temporalFile, containerList);
+                        temporalFilePointer = fopen(temporalFile, "w");
 
-							sleep(0.10);							
+                        while(!feof(containerListPointer)){
 
-						}
+                            strcpy(temporalString, "\0");
 
-						else{
+                            fgets(temporalString, 256, containerListPointer);
 
-							
+                            lineCounter++;
+                        
+                            if(lineCounter != line){
 
-						}
+                                fprintf(temporalFilePointer, "%s", temporalString);
 
-					}
+                            }
 
-					
-					
+                            else{
 
-					
+                                char containerHost[DEFAULT_SIZE], containerNameID[DEFAULT_SIZE], containerStatus[DEFAULT_SIZE];
 
-					printf("\n\nElastic Container Service - Host #%d: Request: %s, Container Name: %s\n\n", HOST_NUMBER, clientRequest, containerName);
+                                char * token = strtok(temporalString, " ");
 
-					sendHostMessage(client_message, host_port);
+                                strcpy(containerHost, token);
 
-				}
 
-				else{
+                                //Ya se cual es el container Host, ahora lo busco en hosts.txt y obtengo su info
 
-					readContainers();
+                                int lineHost = getLineHost(containerHost);
 
-				}
+                                
 
-				received = 1;
 
 
-			}
-			
-			else{
 
-				printf("\n\nElastic Container Service - Admin Container: Received failed.");
 
-			}
 
-		}
+
+
+                                token = strtok(NULL, " ");
+
+                                strcpy(containerNameID, token);
+
+                                token = strtok(NULL, " ");
+
+                                strcpy(containerStatus, token);
+
+                                printf("%s", containerStatus);
+
+                                if(strcmp(containerStatus, "Running") == 0){
+
+                                    printf("\nElastic Container Service - Admin Container: El contenedor ya está corriendo.\n");
+
+                                }
+
+                                else{
+
+                                    sendHostRequest(ecs_client_message_no_split, hostPort);
+
+                                    strcat(containerHost, " ");
+
+                                    strcat(containerHost, containerNameID);
+
+                                    strcat(containerHost, " Running\n");
+
+                                    fprintf(temporalFilePointer, "%s", containerHost);
+
+                                    printf("\nElastic Container Service - Admin Container: El contenedor ha sido activado.\n");
+
+                                }
+
+                            }
+
+                        }
+
+                        fclose(containerListPointer);
+
+                        fclose(temporalFilePointer);
+
+                        remove(containerList);
+
+                        rename(temporalFile, containerList);
+
+                    }
+
+                }
+
+                else if(strcmp(clientRequest, "stop") == 0){
+
+                    if(containerExistence == 1){
+
+                        int line = getContainerLine(containerName), lineCounter = 0;
+
+                        FILE *containerListPointer, *temporalFilePointer;
+
+                        char temporalString[256];
+
+                        char containerList[] = "containers.txt", temporalFile[] = "temporal.txt";
+
+                        containerListPointer = fopen(containerList, "r");
+
+                        temporalFilePointer = fopen(temporalFile, "w");
+
+                        while(!feof(containerListPointer)){
+
+                            strcpy(temporalString, "\0");
+
+                            fgets(temporalString, 256, containerListPointer);
+
+                            lineCounter++;
+                        
+                            if(lineCounter != line){
+
+                                fprintf(temporalFilePointer, "%s", temporalString);
+
+                            }
+
+                            else{
+
+                                char containerHost[DEFAULT_SIZE], containerNameID[DEFAULT_SIZE], containerStatus[DEFAULT_SIZE];
+
+                                char * token = strtok(temporalString, " ");
+
+                                strcpy(containerHost, token);
+
+                                token = strtok(NULL, " ");
+
+                                strcpy(containerNameID, token);
+
+                                token = strtok(NULL, " ");
+
+                                strcpy(containerStatus, token);
+
+                                printf("%s", containerStatus);
+
+                                if(strcmp(containerStatus, "Stopped") == 0){
+
+                                    printf("\nElastic Container Service - Admin Container: El contenedor ya está detenido.\n");
+
+                                }
+
+                                else{
+
+                                    sendHostRequest(ecs_client_message_no_split, hostPort);
+
+                                    strcat(containerHost, " ");
+
+                                    strcat(containerHost, containerNameID);
+
+                                    strcat(containerHost, " Stopped\n");
+
+                                    fprintf(temporalFilePointer, "%s", containerHost);
+
+                                    printf("\nElastic Container Service - Admin Container: El contenedor ha sido detenido.\n");
+
+                                }
+
+                            }
+
+                        }
+
+                        fclose(containerListPointer);
+
+                        fclose(temporalFilePointer);
+
+                        remove(containerList);
+
+                        rename(temporalFile, containerList);
+
+                    }
+
+                }
+
+            }
+
+        }
+
 
     }
 
+
 }
 
-int main() {
+int main(){
 
-	//SHARE MEMORY CREATE
+	//Share Memory Creation
 
 	int fd;
 
-	fd = shm_open(SHMOBJ_NAME, O_CREAT | O_RDWR, 00600);
+	fd = shm_open(SHM_OBJ_NAME, O_CREAT | O_RDWR, 00600);
 
 	if(fd == -1){
 
-		perror("Open");
+        printf("\nShare Memory Creation: ");
+
+		perror("");
+
+        printf("\n");
+
 		exit(1);
 
 	}
 
-	if(ftruncate(fd, SHMOBJ_SIZE) == -1){
+	if(ftruncate(fd, SHM_OBJ_SIZE) == -1){
 
-		perror("Share Memory Resize");
+        printf("\nShare Memory Creation: ");
+
+		perror("");
+
+        printf("\n");
+
 		exit(1);
 
 	}
 
-	//SHARE MEMORY
+	//Share Memory Creation
+
+    //Fork for adminContainer and subscribeHost
 
 	pid_t pid;
 

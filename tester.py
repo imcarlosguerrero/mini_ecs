@@ -1,4 +1,9 @@
 import ecs_client
-import time
 
-ecs_client.listContainers()
+ecs_client.deleteContainer("Steven")
+ecs_client.deleteContainer("Fabian")
+ecs_client.deleteContainer("Juan")
+ecs_client.deleteContainer("Martin")
+ecs_client.deleteContainer("Manuel")
+ecs_client.deleteContainer("Laura")
+ecs_client.deleteContainer("Danna")
